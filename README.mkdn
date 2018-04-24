@@ -18,20 +18,23 @@ INSTALL PREREQUISITES:
 
 ADD adb AND fastboot to PATH(EDIT .bashrc AND ADD):
 
-`
+============================================
+
 if [ -d "$HOME/platform-tools" ] ; then
 
-    PATH="$HOME/platform-tools:$PATH"
-    
+PATH="$HOME/platform-tools:$PATH"
+
 fi
-`
-`
+
 if [ -d "$HOME/bin" ] ; then
 
-    PATH="$HOME/bin:$PATH"
-    
+PATH="$HOME/bin:$PATH"   
+
 fi
-`
+
+============================================
+
+INIT REPO:
 
 `source ~/.bashrc`
 
@@ -55,66 +58,66 @@ SYNC SOURCES:
 
 CREATE RELEASE KEYS FROM BUILD ROOT(DONT USE PASSWORD WHEN PROMPTED):
 
-`
-subject='/C=US/ST=Texas/L=El Paso/O=Pa!N/OU=Hellfire/CN=Hellfire/emailAddress=over@lord.com'
-mkdir ~/.android-certs
-for x in releasekey platform shared media; do \
-    ./development/tools/make_key ~/.android-certs/$x "$subject"; \
-done
-`
+`subject='/C=US/ST=Texas/L=El Paso/O=Pa!N/OU=Hellfire/CN=Hellfire/emailAddress=over@lord.com'`
+
+`mkdir ~/.android-certs`
+
+`for x in releasekey platform shared media; do ./development/tools/make_key ~/.android-certs/$x "$subject"; done`
 
 TO BUILD:
 
 SETUP COMPILER:
 
-`
-export USE_CCACHE=1
-ccache -M 50G
-export ANDROID_JACK_VM_ARGS="-Dfile.encoding=UTF-8 -XX:+TieredCompilation -Xmx8G"
-`
+`export USE_CCACHE=1`
+
+`ccache -M 50G`
+
+`export ANDROID_JACK_VM_ARGS="-Dfile.encoding=UTF-8 -XX:+TieredCompilation -Xmx8G"`
 
 PREP DEVICE SPECIFIC:
 
-`
-source build/envsetup.sh
-breakfast jfltexx
-`
+`source build/envsetup.sh`
+
+`breakfast jfltexx`
+
 EXTRACT PROP BLOBS(ENABLE ADB ROOT ACCESS ON DEVICE):
 
-`
-cd device/samsung/jfltexx/
-./extract-files.sh
-`
+`cd device/samsung/jfltexx/`
+
+`./extract-files.sh`
+
 REINIT ENVIRONMENT AND BUILD:
 
-`
-source build/envsetup.sh
-croot
-export WITH_SU=true
-time brunch jfltexx && killall java
-`
+`source build/envsetup.sh`
+
+`croot`
+
+`export WITH_SU=true`
+
+`time brunch jfltexx && killall java`
+
 OR BUILD OFFICIAL RELEASE:
-`
-source build/envsetup.sh
-breakfast jfltexx
-croot
-export WITH_SU=true
-time mka target-files-package dist && killall java
-`
+
+`source build/envsetup.sh`
+
+`breakfast jfltexx`
+
+`croot`
+
+`export WITH_SU=true`
+
+`time mka target-files-package dist && killall java`
 
 AFTER CONSTRUCTION SIGN APKS: 
 
-`
-croot
-./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip
-`
+`croot`
+
+`./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip`
 
 GENERATE INSTALL BUNDLE:
-`
-./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip
-`
+
+`./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip`
 
 OR IN ONE GO - SIGN APKS AND BUNDLE:
-`
-./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip && ./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip
-`
+
+`./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip && ./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip`
