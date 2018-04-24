@@ -1,52 +1,120 @@
-LineageOS
+Hellfire
 ===========
 
-Submitting Patches
-------------------
 
-Patches are always welcome!  Please submit your patches via LineageOS Gerrit.
-You can do this by using these commands:
+CHECK JAVA:
 
-    (From root android directory)
-    . build/envsetup.sh
-    (Go to repo you are patching, make your changes and commit)
-    cmgerrit <for(new)/changes(patch set)> <branch/change-id>
+`java -version`
 
-    repo start cm-14.1 .
-    (Make your changes and commit)
-    repo upload .
+INSTALL adb AND fastboot:
 
-Note: "." means the current directory
-For more help on using this tool, use this command: `repo help upload`
+`wget https://dl.google.com/android/repository/platform-tools-latest-linux.zip`
 
-Make your changes and commit with a detailed message, starting with what you are working with (i.e. "vision: Update Kernel")
-Commit your patches in a single commit. Squash multiple commits using this command: `git rebase -i HEAD~<# of commits>`
+`unzip platform-tools-latest-linux.zip -d ~`
 
-To view the status of your and others' patches, visit [LineageOS Code Review](https://review.lineageos.org/)
+INSTALL PREREQUISITES:
 
+`apt-get install bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libwxgtk3.0-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev`
 
-Getting Started
----------------
+ADD adb AND fastboot to PATH(EDIT .bashrc AND ADD):
 
-To get started with Android/LineageOS, you'll need to get
-familiar with [Git and Repo](https://source.android.com/source/using-repo.html).
+`
+if [ -d "$HOME/platform-tools" ] ; then
 
-To initialize your local repository using the LineageOS trees, use a command like this:
+    PATH="$HOME/platform-tools:$PATH"
+    
+fi
+`
+`
+if [ -d "$HOME/bin" ] ; then
 
-    repo init -u git://github.com/LineageOS/android.git -b cm-14.1
+    PATH="$HOME/bin:$PATH"
+    
+fi
+`
 
-Then to sync up:
+`source ~/.bashrc`
 
-    repo sync
+`mkdir -p ~/bin`
 
-Please see the [LineageOS Wiki](https://wiki.lineageos.org/) for building instructions.
+`curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo`
 
+`chmod a+x ~/bin/repo`
 
-Buildbot
---------
+CREATE NEW BUILD ENVIRONMENT:
 
-All supported devices are built weekly and periodically as changes are committed to ensure the source trees remain buildable.
+`mkdir newbuild`
 
-You can view the current build statuses at [LineageOS Jenkins](https://jenkins.lineageos.org/)
+`cd newbuild`
 
-Builds produced weekly by the buildbot can be downloaded from [LineageOS downloads](https://download.lineageos.org/)
+`repo init -u https://github.com/etherwvlf/hellfire.git -b cm-14.1`
+
+SYNC SOURCES:
+
+`time repo sync`
+
+CREATE RELEASE KEYS FROM BUILD ROOT(DONT USE PASSWORD WHEN PROMPTED):
+
+`
+subject='/C=US/ST=Texas/L=El Paso/O=Pa!N/OU=Hellfire/CN=Hellfire/emailAddress=over@lord.com'
+mkdir ~/.android-certs
+for x in releasekey platform shared media; do \
+    ./development/tools/make_key ~/.android-certs/$x "$subject"; \
+done
+`
+
+TO BUILD:
+
+SETUP COMPILER:
+
+`
+export USE_CCACHE=1
+ccache -M 50G
+export ANDROID_JACK_VM_ARGS="-Dfile.encoding=UTF-8 -XX:+TieredCompilation -Xmx8G"
+`
+
+PREP DEVICE SPECIFIC:
+
+`
+source build/envsetup.sh
+breakfast jfltexx
+`
+EXTRACT PROP BLOBS(ENABLE ADB ROOT ACCESS ON DEVICE):
+
+`
+cd device/samsung/jfltexx/
+./extract-files.sh
+`
+REINIT ENVIRONMENT AND BUILD:
+
+`
+source build/envsetup.sh
+croot
+export WITH_SU=true
+time brunch jfltexx && killall java
+`
+OR BUILD OFFICIAL RELEASE:
+`
+source build/envsetup.sh
+breakfast jfltexx
+croot
+export WITH_SU=true
+time mka target-files-package dist && killall java
+`
+
+AFTER CONSTRUCTION SIGN APKS: 
+
+`
+croot
+./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip
+`
+
+GENERATE INSTALL BUNDLE:
+`
+./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip
+`
+
+OR IN ONE GO - SIGN APKS AND BUNDLE:
+`
+./build/tools/releasetools/sign_target_files_apks -o -d ~/.android-certs out/dist/*-target_files-*.zip signed-target_files.zip && ./build/tools/releasetools/ota_from_target_files -k ~/.android-certs/releasekey --block --backup=true signed-target_files.zip signed-ota_update.zip
+`
